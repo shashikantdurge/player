@@ -21,23 +21,21 @@ class _PlayerControls extends StatelessWidget {
         Positioned.fill(child: Container(color: Colors.black45)),
         Positioned.fill(
             child: GestureDetector(onTap: player.changeControlsVisibility)),
-        //TODO check for fullscreen instead of orientation
         Positioned(
-          bottom: MediaQuery.of(context).orientation == Orientation.portrait
-              ? 0
-              : 16,
+          bottom: player._isFullscreen ? 16 : 0,
           left: 0,
           right: 0,
           child: PlayerProgressBar(player.controller),
         ),
-        ValueListenableBuilder<VideoPlayerValue>(
-          builder: (context, value, child) {
-            if (value.isBuffering) return child;
-            return SizedBox();
-          },
-          child: Center(child: CircularProgressIndicator()),
-          valueListenable: player.controller,
-        ),
+//FIXME isBuffering always returns false, a BUG is filed in video_player plugin
+//        ValueListenableBuilder<VideoPlayerValue>(
+//          builder: (context, value, child) {
+//            if (value.isBuffering) return child;
+//            return SizedBox();
+//          },
+//          child: Center(child: CircularProgressIndicator()),
+//          valueListenable: player.controller,
+//        ),
         Selector<PlayerProvider, VideoPlayerValue>(
           builder: (context, value, child) {
             if (value.isPlaying) {
@@ -81,24 +79,16 @@ class _PlayerControls extends StatelessWidget {
               icon: Icon(Icons.replay_10),
               onPressed: () => player.seek(-10)),
         ),
-//            if (uiConfig.fullScreenEnabled)
-//              if (MediaQuery.of(context).orientation == Orientation.landscape)
-//                Positioned(
-//                    top: 8,
-//                    right: 8,
-//                    child: IconButton(
-//                        icon: Icon(Icons.fullscreen_exit),
-////                        icon: Icon(Icons.fullscreen_exit),
-//                        onPressed: () =>
-//                            player.changeOrientationTo(Orientation.portrait)))
-//              else
-//                Positioned(
-//                    top: 8,
-//                    right: 8,
-//                    child: IconButton(
-//                        icon: Icon(Icons.fullscreen),
-//                        onPressed: () =>
-//                            player.changeOrientationTo(Orientation.landscape))),
+        Positioned(
+          top: 8,
+          right: 8,
+          child: IconButton(
+            icon: player._isFullscreen
+                ? Icon(Icons.fullscreen_exit)
+                : Icon(Icons.fullscreen),
+            onPressed: player.toggleFullscreen,
+          ),
+        ),
         Align(
           alignment: Alignment(0.6, 0),
           child: IconButton(

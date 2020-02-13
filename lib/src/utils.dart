@@ -19,4 +19,8 @@ String _digits(int value, int length) {
 
 extension on VideoPlayerValue {
   bool get isCompleted => position == duration;
+
+  Orientation get fullScreenOrientation {
+    return aspectRatio > 1.0 ? Orientation.landscape : Orientation.portrait;
+  }
 }

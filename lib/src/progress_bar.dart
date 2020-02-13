@@ -15,7 +15,7 @@ class PlayerProgressColors {
   final Color handleColor;
 }
 
-class PlayerProgressBar extends StatefulWidget {
+class PlayerProgressBar extends StatelessWidget {
   final double height, handleRadius;
   final EdgeInsets padding;
   PlayerProgressBar(
@@ -30,37 +30,8 @@ class PlayerProgressBar extends StatefulWidget {
   final PlayerProgressColors colors;
 
   @override
-  _VideoProgressBarState createState() {
-    return _VideoProgressBarState();
-  }
-}
-
-class _VideoProgressBarState extends State<PlayerProgressBar> {
-  _VideoProgressBarState() {
-    listener = () {
-      setState(() {});
-    };
-  }
-
-  VoidCallback listener;
-  bool _controllerWasPlaying = false;
-
-  VideoPlayerController get controller => widget.controller;
-
-  @override
-  void initState() {
-    super.initState();
-    controller.addListener(listener);
-  }
-
-  @override
-  void deactivate() {
-    controller.removeListener(listener);
-    super.deactivate();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    bool _controllerWasPlaying = false;
     void seekToRelativePosition(Offset globalPosition) async {
       final box = context.findRenderObject() as RenderBox;
       final Offset tapPos = box.globalToLocal(globalPosition);
@@ -74,44 +45,45 @@ class _VideoProgressBarState extends State<PlayerProgressBar> {
       }
     }
 
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      child: Container(
-        padding: widget.padding,
-        child: CustomPaint(
-          size: Size.fromHeight(widget.height),
-          painter: _ProgressBarPainter(
-              value: controller.value,
-              colors: widget.colors,
-              handleRadius: widget.handleRadius),
+    return ValueListenableBuilder<VideoPlayerValue>(
+      valueListenable: controller,
+      builder: (context, value, child) => GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        child: Container(
+          padding: padding,
+          child: CustomPaint(
+            size: Size.fromHeight(height),
+            painter: _ProgressBarPainter(
+                value: value, colors: colors, handleRadius: handleRadius),
+          ),
         ),
+        onHorizontalDragStart: (DragStartDetails details) {
+          if (!value.initialized) {
+            return;
+          }
+          _controllerWasPlaying = value.isPlaying;
+          if (_controllerWasPlaying) {
+            controller.pause();
+          }
+        },
+        onHorizontalDragUpdate: (DragUpdateDetails details) {
+          if (!value.initialized) {
+            return;
+          }
+          seekToRelativePosition(details.globalPosition);
+        },
+        onHorizontalDragEnd: (DragEndDetails details) {
+          if (_controllerWasPlaying) {
+            controller.play();
+          }
+        },
+        onTapDown: (TapDownDetails details) {
+          if (!value.initialized) {
+            return;
+          }
+          seekToRelativePosition(details.globalPosition);
+        },
       ),
-      onHorizontalDragStart: (DragStartDetails details) {
-        if (!controller.value.initialized) {
-          return;
-        }
-        _controllerWasPlaying = controller.value.isPlaying;
-        if (_controllerWasPlaying) {
-          controller.pause();
-        }
-      },
-      onHorizontalDragUpdate: (DragUpdateDetails details) {
-        if (!controller.value.initialized) {
-          return;
-        }
-        seekToRelativePosition(details.globalPosition);
-      },
-      onHorizontalDragEnd: (DragEndDetails details) {
-        if (_controllerWasPlaying) {
-          controller.play();
-        }
-      },
-      onTapDown: (TapDownDetails details) {
-        if (!controller.value.initialized) {
-          return;
-        }
-        seekToRelativePosition(details.globalPosition);
-      },
     );
   }
 }

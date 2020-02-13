@@ -38,11 +38,7 @@ class _MyHomePageState extends State<MyHomePage> {
         child: RaisedButton(
           onPressed: () {
             Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-              return Scaffold(
-                body: Center(
-                  child: Player(),
-                ),
-              );
+              return Player();
             }));
           },
           child: Text('OPEN PLAYER'),

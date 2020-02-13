@@ -9,16 +9,21 @@ class PlayerProvider with ChangeNotifier {
   final Widget title;
   final LoadingBuilder loadingBuilder;
   final ErrorBuilder errorBuilder;
-  final Duration hideControlsDuration;
+  final Duration hideControlsIn;
   bool _isControlsShown = false;
   int _hideControlsMatcher = 0;
+  final bool onlyFullscreen;
+  bool _isFullscreen;
   final VideoPlayerController controller;
   VoidCallback listener;
+  bool _isDisposed = false;
+//  Orientation _orientationBefFullscreen;
 //  VideoPlayerValue _lastValue;
 
   VideoPlayerValue get value => controller.value;
 
-  PlayerProvider({
+  PlayerProvider(
+    BuildContext context, {
     @required this.controller,
     this.dPlayerProvider,
     this.onComplete,
@@ -29,11 +34,13 @@ class PlayerProvider with ChangeNotifier {
     this.title, //TODO put it in Player Controls
     this.loadingBuilder, //TODO put it in Player Controls
     this.errorBuilder, //TODO put it in Player Controls
-    this.hideControlsDuration = const Duration(seconds: 5),
+    this.hideControlsIn = const Duration(seconds: 5),
     this.aspectRatio,
+    this.onlyFullscreen = false,
   }) {
+    _isFullscreen = onlyFullscreen;
     listener = () {
-      log('$value', name: 'PLAYER PROVIDER');
+//      log('$value', name: 'PLAYER PROVIDER');
       if (value.hasError) {
         notifyListeners();
       } else if (value.position == value.duration) {
@@ -51,15 +58,21 @@ class PlayerProvider with ChangeNotifier {
   }
 
   void init() async {
+    if (_isDisposed) return;
     controller.removeListener(listener);
     controller.addListener(listener);
     notifyListeners();
-    await controller.initialize();
-    if (autoPlay) {
-      await controller.play();
+    try {
+      await controller.initialize();
+      if (onlyFullscreen) enterFullscreen();
+      if (autoPlay) {
+        await controller.play();
+      }
+      notifyListeners();
+      Wakelock.enable();
+    } catch (err) {
+      //IGNORE error may be handled by [listener]
     }
-    notifyListeners();
-    Wakelock.enable();
   }
 
   Future<void> playPause() async {
@@ -82,12 +95,13 @@ class PlayerProvider with ChangeNotifier {
 
   ///Shows controls for [_visibleDuration] and disables
   void _showControls() {
+    if (_isDisposed) return;
     _isControlsShown = true;
     notifyListeners();
     final matcher = _hideControlsMatcher + 1;
     if (value.isPlaying) {
       Future.delayed(
-        hideControlsDuration,
+        hideControlsIn,
         () => _hideControls(matcher),
       );
     }
@@ -95,12 +109,14 @@ class PlayerProvider with ChangeNotifier {
   }
 
   void _hideControls(int matcher) {
+    if (_isDisposed) return;
     if (matcher != _hideControlsMatcher) return;
     _isControlsShown = false;
     notifyListeners();
   }
 
   void changeControlsVisibility() {
+    log('CHANGE CONTROLS VISIBILITY TO ${!_isControlsShown}', name: 'CONTROLS');
     if (_isControlsShown) {
       _hideControls(_hideControlsMatcher);
     } else {
@@ -108,8 +124,45 @@ class PlayerProvider with ChangeNotifier {
     }
   }
 
+  void enterFullscreen() {
+    if (_isDisposed) return;
+//    _orientationBefFullscreen = MediaQuery.of(context).orientation;
+    SystemChrome.setEnabledSystemUIOverlays([]);
+
+    if (value.fullScreenOrientation == Orientation.portrait) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitDown,
+        DeviceOrientation.portraitUp,
+      ]);
+    } else {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeRight,
+        DeviceOrientation.landscapeLeft,
+      ]);
+    }
+    _isFullscreen = true;
+    notifyListeners();
+  }
+
+  void exitFullscreen() {
+    if (_isDisposed) return;
+//    assert(onlyFullscreen == false);
+    SystemChrome.setPreferredOrientations([]);
+    SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values);
+    _isFullscreen = false;
+    notifyListeners();
+  }
+
+  void toggleFullscreen() {
+    if (_isFullscreen)
+      exitFullscreen();
+    else
+      enterFullscreen();
+  }
+
   @override
   void dispose() {
+    _isDisposed = true;
     controller.dispose();
     Wakelock.disable();
     super.dispose();
