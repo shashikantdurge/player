@@ -12,11 +12,7 @@ typedef ErrorBuilder = Widget Function(
     BuildContext context, VoidCallback retry);
 
 class Player extends StatefulWidget {
-//  final PlayerProvider playerProvider;
-  const Player({
-    Key key,
-//    @required this.playerProvider,
-  }) : super(key: key);
+  const Player({Key key}) : super(key: key);
   @override
   State<StatefulWidget> createState() {
     return _PlayerState();
@@ -49,6 +45,8 @@ class _PlayerState extends State<Player> {
         return PlayerProvider(context,
             controller: VideoPlayerController.network(portraitVideo),
 //            onlyFullscreen: true,
+            minAspectRatio: 0.8,
+            maxAspectRatio: 16 / 9,
             hideControlsIn: Duration(seconds: 5))
           ..init();
       },
@@ -78,39 +76,48 @@ class _PlayerState extends State<Player> {
   }
 }
 
-class _VideoPlayer extends StatelessWidget {
+class _VideoPlayer extends StatefulWidget {
   ///This is to prevent multiple videos playing. This could save battery life or improve the performance
   final bool isFullscreen;
   _VideoPlayer({Key key, @required this.isFullscreen}) : super(key: key);
 
   @override
+  __VideoPlayerState createState() => __VideoPlayerState();
+}
+
+class __VideoPlayerState extends State<_VideoPlayer>
+    with SingleTickerProviderStateMixin {
+  @override
   Widget build(BuildContext context) {
     final player = Provider.of<PlayerProvider>(context);
 
-    Widget playerWidget = AspectRatio(
-      aspectRatio: player.value.aspectRatio,
-      child: isFullscreen == player._isFullscreen
-          ? Stack(
-              fit: StackFit.passthrough,
-              children: <Widget>[
-                Positioned.fill(child: VideoPlayer(player.controller)),
-                Positioned.fill(
-                  child: player.value.initialized
-                      ? AnimatedSwitcher(
-                          child: player._isControlsShown
-                              ? _PlayerControls()
-                              : InkWell(onTap: player.changeControlsVisibility),
-                          duration: const Duration(milliseconds: 250),
-                        )
-                      : player.value.hasError
-                          ? Icon(Icons.error, color: Colors.white)
-                          : Center(child: CircularProgressIndicator()),
-                )
-              ],
-            )
-          : SizedBox(),
-    );
-    if (player._isFullscreen) {
+    Widget playerWidget = widget.isFullscreen == player._isFullscreen
+        ? Stack(
+            fit: StackFit.passthrough,
+            children: <Widget>[
+              Center(
+                child: AspectRatio(
+                  aspectRatio: player.value.aspectRatio,
+                  child: VideoPlayer(player.controller),
+                ),
+              ),
+              Positioned.fill(
+                child: player.value.initialized
+                    ? AnimatedSwitcher(
+                        child: player._isControlsShown
+                            ? _PlayerControls()
+                            : GestureDetector(
+                                onTap: player.changeControlsVisibility),
+                        duration: const Duration(milliseconds: 250),
+                      )
+                    : player.value.hasError
+                        ? Icon(Icons.error, color: Colors.white)
+                        : Center(child: CircularProgressIndicator()),
+              ),
+            ],
+          )
+        : Container(color: Colors.black);
+    if (widget.isFullscreen) {
       playerWidget = WillPopScope(
         child: playerWidget,
         onWillPop: () async {
@@ -118,7 +125,22 @@ class _VideoPlayer extends StatelessWidget {
           return false;
         },
       );
+    } else {
+      playerWidget = AspectRatio(
+        aspectRatio: player.value.playerRatio
+            .clamp(player.minAspectRatio, player.maxAspectRatio),
+        child: playerWidget,
+      );
     }
+
+    if (player.minAspectRatio != player.maxAspectRatio) {
+      playerWidget = AnimatedSize(
+        duration: const Duration(milliseconds: 250),
+        vsync: this,
+        child: playerWidget,
+      );
+    }
+
     return Material(
       color: Colors.black,
       child: Center(child: playerWidget),

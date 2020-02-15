@@ -23,4 +23,11 @@ extension on VideoPlayerValue {
   Orientation get fullScreenOrientation {
     return aspectRatio > 1.0 ? Orientation.landscape : Orientation.portrait;
   }
+
+  double get playerRatio {
+    if (!initialized) {
+      return double.infinity;
+    }
+    return aspectRatio;
+  }
 }

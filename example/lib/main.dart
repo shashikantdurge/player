@@ -34,15 +34,41 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: Center(
-        child: RaisedButton(
-          onPressed: () {
-            Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-              return Player();
-            }));
-          },
-          child: Text('OPEN PLAYER'),
-        ),
+      body: Column(
+        children: <Widget>[
+          Center(
+            child: RaisedButton(
+              onPressed: () {
+                Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (context) {
+                  return SafeArea(child: Player());
+                }));
+              },
+              child: Text('OPEN PLAYER'),
+            ),
+          ),
+          Center(
+            child: RaisedButton(
+              onPressed: () {
+                Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (context) {
+                  return Scaffold(
+                      body: SafeArea(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: <Widget>[
+                          Player(),
+                          SizedBox(height: 120, child: Text('HELLO THERE'))
+                        ],
+                      ),
+                    ),
+                  ));
+                }));
+              },
+              child: Text('Scaffold PLAYER'),
+            ),
+          ),
+        ],
       ),
     );
   }

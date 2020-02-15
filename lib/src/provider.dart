@@ -3,8 +3,7 @@ part of player;
 class PlayerProvider with ChangeNotifier {
   final PlayerProvider dPlayerProvider;
   final DataSourceCallback onComplete, onNext, onPrevious;
-  final double aspectRatio;
-  final bool autoFit;
+  final double minAspectRatio, maxAspectRatio;
   final bool autoPlay;
   final Widget title;
   final LoadingBuilder loadingBuilder;
@@ -17,8 +16,6 @@ class PlayerProvider with ChangeNotifier {
   final VideoPlayerController controller;
   VoidCallback listener;
   bool _isDisposed = false;
-//  Orientation _orientationBefFullscreen;
-//  VideoPlayerValue _lastValue;
 
   VideoPlayerValue get value => controller.value;
 
@@ -29,13 +26,13 @@ class PlayerProvider with ChangeNotifier {
     this.onComplete,
     this.onNext,
     this.onPrevious,
-    this.autoFit,
     this.autoPlay = true,
     this.title, //TODO put it in Player Controls
     this.loadingBuilder, //TODO put it in Player Controls
     this.errorBuilder, //TODO put it in Player Controls
     this.hideControlsIn = const Duration(seconds: 5),
-    this.aspectRatio,
+    this.minAspectRatio = 16 / 9,
+    this.maxAspectRatio = 16 / 9,
     this.onlyFullscreen = false,
   }) {
     _isFullscreen = onlyFullscreen;
@@ -126,7 +123,6 @@ class PlayerProvider with ChangeNotifier {
 
   void enterFullscreen() {
     if (_isDisposed) return;
-//    _orientationBefFullscreen = MediaQuery.of(context).orientation;
     SystemChrome.setEnabledSystemUIOverlays([]);
 
     if (value.fullScreenOrientation == Orientation.portrait) {
@@ -146,7 +142,6 @@ class PlayerProvider with ChangeNotifier {
 
   void exitFullscreen() {
     if (_isDisposed) return;
-//    assert(onlyFullscreen == false);
     SystemChrome.setPreferredOrientations([]);
     SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values);
     _isFullscreen = false;
@@ -168,5 +163,3 @@ class PlayerProvider with ChangeNotifier {
     super.dispose();
   }
 }
-
-//enum $PlayerState { initializing, playing, paused, completed, error }
