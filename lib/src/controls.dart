@@ -12,17 +12,19 @@ part of player;
 
 abstract class PlayerControls extends StatelessWidget {
   final Color barrierColor = Colors.black45;
+
+  const PlayerControls();
+
   ThemeData theme(BuildContext context) => ThemeData.dark();
   List<Widget> children(BuildContext context, PlayerProvider player);
 
   @override
   Widget build(BuildContext context) {
-    final player = Provider.of<PlayerProvider>(context);
-
     return Theme(
       data: theme(context),
       child: Builder(
         builder: (context) {
+          final player = Provider.of<PlayerProvider>(context);
           final controls = Stack(
             fit: StackFit.passthrough,
             children: children(context, player),
@@ -43,6 +45,8 @@ abstract class PlayerControls extends StatelessWidget {
 }
 
 class DefaultControls extends PlayerControls {
+  const DefaultControls();
+
   @override
   List<Widget> children(context, PlayerProvider player) {
     final iconSize = 48.0;
@@ -76,19 +80,19 @@ class DefaultControls extends PlayerControls {
         right: 0,
         child: PlayerProgressBar(player.controller),
       ),
-      if (player.value.isPlaying)
-        Center(
-          child: IconButton(
-            iconSize: iconSize,
-            icon: Icon(Icons.pause),
-            onPressed: player.playPause,
-          ),
-        )
-      else if (player.value.isCompleted)
+      if (player.value.isCompleted)
         Center(
           child: IconButton(
             iconSize: iconSize,
             icon: Icon(Icons.replay),
+            onPressed: player.playPause,
+          ),
+        )
+      else if (player.value.isPlaying)
+        Center(
+          child: IconButton(
+            iconSize: iconSize,
+            icon: Icon(Icons.pause),
             onPressed: player.playPause,
           ),
         )
@@ -152,10 +156,17 @@ class DefaultControls extends PlayerControls {
 }
 
 class YoutubeControls extends PlayerControls {
+  final int seekSeconds;
+
+  YoutubeControls({this.seekSeconds = 10});
+
   @override
   List<Widget> children(BuildContext context, PlayerProvider player) {
     final visibilityHandler = Positioned.fill(
-      child: _YoutubeGestureHandler(player: player),
+      child: _YoutubeGestureHandler(
+        player: player,
+        seekSeconds: seekSeconds,
+      ),
     );
     if (!player._isControlsShown && player.isFullscreen) {
       return [visibilityHandler];
@@ -246,9 +257,13 @@ class YoutubeControls extends PlayerControls {
 
 class _YoutubeGestureHandler extends StatefulWidget {
   final PlayerProvider player;
+  final int seekSeconds;
 
-  const _YoutubeGestureHandler({Key key, @required this.player})
-      : super(key: key);
+  const _YoutubeGestureHandler({
+    Key key,
+    @required this.player,
+    @required this.seekSeconds,
+  }) : super(key: key);
 
   @override
   State<StatefulWidget> createState() {
@@ -290,10 +305,11 @@ class _YoutubeGestureHandlerState extends State<_YoutubeGestureHandler>
                   widget.player.value.position > const Duration()) {
                 setState(() {
                   rewindSeeked += 1;
-                  log('BACK ${rewindSeeked * 10} seconds', name: 'CONTROLS');
+                  log('BACK ${rewindSeeked * widget.seekSeconds} seconds',
+                      name: 'CONTROLS');
                 });
                 rewindAnimCtrl.forward(from: 0);
-                widget.player.seek(-10);
+                widget.player.seek(-widget.seekSeconds);
               } else {
                 widget.player.changeControlsVisibility();
               }
@@ -302,17 +318,17 @@ class _YoutubeGestureHandlerState extends State<_YoutubeGestureHandler>
                     widget.player.value.position <= const Duration()
                 ? null
                 : () {
-                    log('onDoubleTap ${rewindSeeked * 10} seconds',
+                    log('onDoubleTap ${rewindSeeked * widget.seekSeconds} seconds',
                         name: 'CONTROLS');
                     setState(() {
                       rewindSeeked = 1;
                     });
                     rewindAnimCtrl.forward(from: 0);
-                    widget.player.seek(-10);
+                    widget.player.seek(-widget.seekSeconds);
                   },
             child: SeekFeedback.reverse(
               controller: rewindAnimCtrl,
-              seconds: rewindSeeked * 10,
+              seconds: rewindSeeked * widget.seekSeconds,
             ),
           ),
         ),
@@ -327,13 +343,13 @@ class _YoutubeGestureHandlerState extends State<_YoutubeGestureHandler>
             onTap: () {
               if (forwardAnimCtrl.isAnimating &&
                   widget.player.value.position < widget.player.value.duration) {
-                log('Forward onTap ${forwardSeeked * 10} seconds',
+                log('Forward onTap ${forwardSeeked * widget.seekSeconds} seconds',
                     name: 'CONTROLS');
                 setState(() {
                   forwardSeeked += 1;
                 });
                 forwardAnimCtrl.forward(from: 0);
-                widget.player.seek(10);
+                widget.player.seek(widget.seekSeconds);
               } else {
                 widget.player.changeControlsVisibility();
               }
@@ -342,17 +358,17 @@ class _YoutubeGestureHandlerState extends State<_YoutubeGestureHandler>
                 forwardAnimCtrl.isAnimating || widget.player.value.isCompleted
                     ? null
                     : () {
-                        log('Forward onDoubleTap ${forwardSeeked * 10} seconds',
+                        log('Forward onDoubleTap ${forwardSeeked * widget.seekSeconds} seconds',
                             name: 'CONTROLS');
                         setState(() {
                           forwardSeeked = 1;
                         });
                         forwardAnimCtrl.forward(from: 0);
-                        widget.player.seek(10);
+                        widget.player.seek(widget.seekSeconds);
                       },
             child: SeekFeedback.forward(
               controller: forwardAnimCtrl,
-              seconds: forwardSeeked * 10,
+              seconds: forwardSeeked * widget.seekSeconds,
             ),
           ),
         ),

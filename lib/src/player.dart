@@ -1,117 +1,171 @@
 part of player;
 
-const videoUrl1 =
-    "https://player.vimeo.com/external/340643735.hd.mp4?s=86c98b4dc4b52bcd290236673e5de6724982b65e&profile_id=174";
-const portraitVideo =
-    "https://firebasestorage.googleapis.com/v0/b/shaale-one-development.appspot.com/o/temp%2Fvideoplayback.mp4?alt=media&token=83209811-676b-4d0c-bb4b-445b6a216796";
-typedef DataSourceCallback = PlayerProvider Function(BuildContext context);
-
-typedef LoadingBuilder = Widget Function(BuildContext context);
-
 typedef ErrorBuilder = Widget Function(
     BuildContext context, VoidCallback retry);
 
+showVideo({
+  @required BuildContext context,
+  PlayerControls controls,
+  WidgetBuilder loadingBuilder,
+  ErrorBuilder errorBuilder,
+  VoidCallback onComplete,
+  bool autoPlay,
+  Duration hideControlsIn,
+  @required VideoPlayerController controller,
+}) {
+  Navigator.of(context, rootNavigator: true)
+      .push(MaterialPageRoute(builder: (context) {
+    return Player._fullscreen(
+      controls: controls ?? const DefaultControls(),
+      loadingBuilder: loadingBuilder,
+      errorBuilder: errorBuilder,
+      onComplete: onComplete,
+      autoPlay: autoPlay ?? true,
+      hideControlsIn: hideControlsIn ?? const Duration(seconds: 5),
+      controller: controller,
+    );
+  }));
+}
+
 class Player extends StatefulWidget {
-  const Player({Key key}) : super(key: key);
+  final PlayerControls controls;
+  final WidgetBuilder loadingBuilder;
+  final ErrorBuilder errorBuilder;
+  final VoidCallback onComplete;
+  final bool autoPlay;
+  final Duration hideControlsIn;
+  final double minAspectRatio;
+  final double maxAspectRatio;
+  final VideoPlayerController controller;
+  final bool onlyFullscreen;
+
+  const Player({
+    Key key,
+    @required this.controller,
+    this.loadingBuilder,
+    this.errorBuilder,
+    this.onComplete,
+    this.controls = const DefaultControls(),
+    this.autoPlay = true,
+    this.hideControlsIn = const Duration(seconds: 5),
+    this.minAspectRatio = 16 / 9,
+    this.maxAspectRatio = 16 / 9,
+  })  : onlyFullscreen = false,
+        assert(autoPlay != null),
+        assert(hideControlsIn != null),
+        assert(controller != null),
+        assert(
+            minAspectRatio != null && maxAspectRatio != null,
+            'minAspectRatio and maxAspectRatio cannot be null. If you want '
+            'to have constant aspect ratio, asssign the constant aspect ratio'
+            ' to both of them'),
+        super(key: key);
+
+  const Player._fullscreen({
+    Key key,
+    this.controls = const DefaultControls(),
+    this.loadingBuilder,
+    this.errorBuilder,
+    this.onComplete,
+    this.autoPlay = true,
+    this.hideControlsIn = const Duration(seconds: 5),
+    this.controller,
+  })  : minAspectRatio = null,
+        maxAspectRatio = null,
+        onlyFullscreen = true,
+        super(key: key);
+
   @override
   State<StatefulWidget> createState() {
     return _PlayerState();
   }
+
+  Widget defaultLoader(context) => Center(child: CircularProgressIndicator());
 }
 
-class _PlayerState extends State<Player> {
+class _PlayerState extends State<Player> with TickerProviderStateMixin {
   bool _isFullscreen;
-  _PlayerState();
+  PlayerProvider player;
 
-  pushFullScreen(BuildContext context) async {
-    final provider = Provider.of<PlayerProvider>(context, listen: false);
-    provider.enterFullscreen();
-    await Navigator.of(context, rootNavigator: true).push(
+  @override
+  void initState() {
+    super.initState();
+    _isFullscreen = widget.onlyFullscreen;
+    player = PlayerProvider(
+      controller: widget.controller,
+      hideControlsIn: widget.hideControlsIn,
+      autoPlay: widget.autoPlay,
+      onComplete: widget.onComplete,
+      onlyFullscreen: widget.onlyFullscreen,
+    )
+      ..init()
+      ..addListener(_listener);
+  }
+
+  @override
+  void didUpdateWidget(Player oldWidget) {
+    final thisWidget = widget;
+    final isEqual = oldWidget == thisWidget;
+    // TODO: implement didUpdateWidget
+    super.didUpdateWidget(oldWidget);
+  }
+
+  void _listener() {
+//    setState(() {});
+    if (_isFullscreen != player._isFullscreen) {
+      this._isFullscreen = player._isFullscreen;
+      _handleFullscreen();
+    } else {
+      setState(() {});
+    }
+  }
+
+  _pushFullScreen() async {
+    player.enterFullscreen();
+    Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         builder: (context) {
-          return ListenableProvider<PlayerProvider>.value(
-            value: provider,
-            child: _VideoPlayer(isFullscreen: true),
+          return ListenableProvider.value(
+            value: player,
+            child: buildPlayer(true),
           );
         },
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) {
-        return PlayerProvider(context,
-            controller: VideoPlayerController.network(videoUrl1),
-            minAspectRatio: 0.8,
-            maxAspectRatio: 16 / 9,
-            hideControlsIn: Duration(seconds: 5))
-          ..init();
-      },
-      child: Consumer<PlayerProvider>(
-        builder: (context, values, child) {
-          final player = Provider.of<PlayerProvider>(context, listen: false);
-
-          if (player._isFullscreen != this._isFullscreen &&
-              this._isFullscreen != null) {
-            if (player._isFullscreen) {
-              SchedulerBinding.instance.addPostFrameCallback((_) {
-                pushFullScreen(context);
-              });
-            } else {
-              SchedulerBinding.instance.addPostFrameCallback((_) {
-                Navigator.of(context, rootNavigator: true).pop();
-              });
-            }
-          }
-          this._isFullscreen = player._isFullscreen;
-          return _VideoPlayer(isFullscreen: player.onlyFullscreen);
-        },
-      ),
-    );
+  _handleFullscreen() {
+    if (player._isFullscreen) {
+      _pushFullScreen();
+    } else {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
   }
-}
 
-class _VideoPlayer extends StatefulWidget {
-  ///This is to prevent multiple videos playing. This could save battery life or improve the performance
-  final bool isFullscreen;
-  _VideoPlayer({Key key, @required this.isFullscreen}) : super(key: key);
-
-  @override
-  __VideoPlayerState createState() => __VideoPlayerState();
-}
-
-class __VideoPlayerState extends State<_VideoPlayer>
-    with SingleTickerProviderStateMixin {
-  @override
-  Widget build(BuildContext context) {
-    final player = Provider.of<PlayerProvider>(context);
-
-    Widget playerWidget = widget.isFullscreen == player._isFullscreen
-        ? Stack(
-            fit: StackFit.passthrough,
-            children: <Widget>[
-              Center(
-                child: AspectRatio(
-                  aspectRatio: player.value.aspectRatio,
-                  child: VideoPlayer(player.controller),
-                ),
-              ),
-              Positioned.fill(
-                child: player.value.initialized
-                    ? Material(
-                        color: Colors.transparent,
-                        child: YoutubeControls(),
-                      )
-                    : player.value.hasError
-                        ? Icon(Icons.error, color: Colors.white)
-                        : Center(child: CircularProgressIndicator()),
-              ),
-            ],
-          )
-        : Container(color: Colors.black);
-    if (widget.isFullscreen) {
+  Widget buildPlayer(bool isVisible) {
+    if (!isVisible) return SizedBox();
+    Widget playerWidget = Stack(
+      fit: StackFit.passthrough,
+      children: <Widget>[
+        Center(
+          child: AspectRatio(
+            aspectRatio: player.value.aspectRatio,
+            child: VideoPlayer(player.controller),
+          ),
+        ),
+        Positioned.fill(
+          child: player.value.initialized
+              ? Material(
+                  color: Colors.transparent,
+                  child: widget.controls,
+                )
+              : player.value.hasError
+                  ? Icon(Icons.error, color: Colors.white)
+                  : Center(child: CircularProgressIndicator()),
+        ),
+      ],
+    );
+    if (_isFullscreen) {
       playerWidget = WillPopScope(
         child: playerWidget,
         onWillPop: () async {
@@ -120,18 +174,14 @@ class __VideoPlayerState extends State<_VideoPlayer>
         },
       );
     } else {
-      playerWidget = AspectRatio(
-        aspectRatio: player.value.playerRatio
-            .clamp(player.minAspectRatio, player.maxAspectRatio),
-        child: playerWidget,
-      );
-    }
-
-    if (player.minAspectRatio != player.maxAspectRatio) {
       playerWidget = AnimatedSize(
-        duration: const Duration(milliseconds: 250),
         vsync: this,
-        child: playerWidget,
+        duration: const Duration(milliseconds: 250),
+        child: AspectRatio(
+          aspectRatio: player.value.playerRatio
+              .clamp(widget.minAspectRatio, widget.maxAspectRatio),
+          child: playerWidget,
+        ),
       );
     }
 
@@ -139,5 +189,19 @@ class __VideoPlayerState extends State<_VideoPlayer>
       color: Colors.black,
       child: Center(child: playerWidget),
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableProvider.value(
+      value: player,
+      child: buildPlayer(player.onlyFullscreen ? true : !_isFullscreen),
+    );
+  }
+
+  @override
+  void dispose() {
+    player.dispose();
+    super.dispose();
   }
 }

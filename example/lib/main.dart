@@ -3,6 +3,9 @@ import 'package:player/player.dart';
 
 const videoUrl1 =
     "https://player.vimeo.com/external/340643735.hd.mp4?s=86c98b4dc4b52bcd290236673e5de6724982b65e&profile_id=174";
+const portraitVideo =
+    "https://firebasestorage.googleapis.com/v0/b/shaale-one-development.appspot.com/o/temp%2Fvideoplayback.mp4?alt=media&token=83209811-676b-4d0c-bb4b-445b6a216796";
+
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
@@ -36,39 +39,78 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: Column(
         children: <Widget>[
-          Center(
-            child: RaisedButton(
-              onPressed: () {
-                Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (context) {
-                  return SafeArea(child: Player());
-                }));
-              },
-              child: Text('OPEN PLAYER'),
-            ),
+          RaisedButton(
+            onPressed: () {
+              showVideo(
+                  context: context,
+                  controller: VideoPlayerController.network(portraitVideo));
+            },
+            child: Text('Full screen PORTRAIT'),
           ),
-          Center(
-            child: RaisedButton(
-              onPressed: () {
-                Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (context) {
-                  return Scaffold(
-                      body: SafeArea(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        children: <Widget>[
-                          Player(),
-                          SizedBox(height: 120, child: Text('HELLO THERE'))
-                        ],
-                      ),
-                    ),
-                  ));
-                }));
-              },
-              child: Text('Scaffold PLAYER'),
-            ),
+          RaisedButton(
+            onPressed: () {
+              showVideo(
+                  context: context,
+                  controller: VideoPlayerController.network(videoUrl1));
+            },
+            child: Text('Full screen LANDSCAPE'),
+          ),
+          RaisedButton(
+            onPressed: () {
+              Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+                return PortraitVideoExample();
+              }));
+            },
+            child: Text('Portrait video'),
+          ),
+          RaisedButton(
+            onPressed: () {
+              Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+                return LandscapeVideoExample();
+              }));
+            },
+            child: Text('Landscape video'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class PortraitVideoExample extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: <Widget>[
+            Player(
+              controller: VideoPlayerController.network(portraitVideo),
+              minAspectRatio: 1,
+              controls: DefaultControls(),
+            ),
+            Text('TODO BODY')
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class LandscapeVideoExample extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: <Widget>[
+            Player(
+              controller: VideoPlayerController.network(videoUrl1),
+              minAspectRatio: 0.8,
+            ),
+            Text('TODO BODY')
+          ],
+        ),
       ),
     );
   }
