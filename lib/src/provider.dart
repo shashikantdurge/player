@@ -5,7 +5,6 @@ class PlayerProvider with ChangeNotifier {
   final DataSourceCallback onComplete, onNext, onPrevious;
   final double minAspectRatio, maxAspectRatio;
   final bool autoPlay;
-  final Widget title;
   final LoadingBuilder loadingBuilder;
   final ErrorBuilder errorBuilder;
   final Duration hideControlsIn;
@@ -13,11 +12,14 @@ class PlayerProvider with ChangeNotifier {
   int _hideControlsMatcher = 0;
   final bool onlyFullscreen;
   bool _isFullscreen;
+
   final VideoPlayerController controller;
   VoidCallback listener;
   bool _isDisposed = false;
 
+  bool get mounted => !_isDisposed;
   VideoPlayerValue get value => controller.value;
+  bool get isFullscreen => _isFullscreen;
 
   PlayerProvider(
     BuildContext context, {
@@ -27,30 +29,24 @@ class PlayerProvider with ChangeNotifier {
     this.onNext,
     this.onPrevious,
     this.autoPlay = true,
-    this.title, //TODO put it in Player Controls
-    this.loadingBuilder, //TODO put it in Player Controls
-    this.errorBuilder, //TODO put it in Player Controls
-    this.hideControlsIn = const Duration(seconds: 5),
+    this.loadingBuilder,
+    this.errorBuilder,
+    this.hideControlsIn = const Duration(seconds: 3),
     this.minAspectRatio = 16 / 9,
     this.maxAspectRatio = 16 / 9,
     this.onlyFullscreen = false,
-  }) {
+  }) : assert(
+            minAspectRatio != null && maxAspectRatio != null,
+            'minAspectRatio and maxAspectRatio cannot be null. If you want '
+            'to have constant aspect ratio, asssign the constant aspect ratio'
+            ' to both of them') {
     _isFullscreen = onlyFullscreen;
     listener = () {
-//      log('$value', name: 'PLAYER PROVIDER');
       if (value.hasError) {
         notifyListeners();
       } else if (value.position == value.duration) {
         _showControls();
       }
-//      else if (_lastValue.isPlaying != value.isPlaying) {
-//        notifyListeners();
-//      }
-
-//      if (_lastValue.isBuffering != value.isBuffering) {
-//        notifyListeners();
-//      }
-//      _lastValue = value;
     };
   }
 
@@ -85,18 +81,24 @@ class PlayerProvider with ChangeNotifier {
   }
 
   Future<void> seek(int seconds) async {
+    final isCompleted = value.isCompleted;
     await controller
         .seekTo(controller.value.position + Duration(seconds: seconds));
-    _showControls();
+    if (isCompleted) {
+      await controller.play();
+    }
+    if (_isControlsShown) _showControls();
   }
 
   ///Shows controls for [_visibleDuration] and disables
-  void _showControls() {
+  void _showControls({bool autoHide = true}) {
     if (_isDisposed) return;
-    _isControlsShown = true;
-    notifyListeners();
+    if (!_isControlsShown) {
+      _isControlsShown = true;
+      notifyListeners();
+    }
     final matcher = _hideControlsMatcher + 1;
-    if (value.isPlaying) {
+    if (value.isPlaying && autoHide) {
       Future.delayed(
         hideControlsIn,
         () => _hideControls(matcher),
@@ -106,10 +108,11 @@ class PlayerProvider with ChangeNotifier {
   }
 
   void _hideControls(int matcher) {
-    if (_isDisposed) return;
-    if (matcher != _hideControlsMatcher) return;
-    _isControlsShown = false;
-    notifyListeners();
+    if (_isDisposed || matcher != _hideControlsMatcher) return;
+    if (_isControlsShown) {
+      _isControlsShown = false;
+      notifyListeners();
+    }
   }
 
   void changeControlsVisibility() {

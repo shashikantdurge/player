@@ -43,8 +43,7 @@ class _PlayerState extends State<Player> {
     return ChangeNotifierProvider(
       create: (context) {
         return PlayerProvider(context,
-            controller: VideoPlayerController.network(portraitVideo),
-//            onlyFullscreen: true,
+            controller: VideoPlayerController.network(videoUrl1),
             minAspectRatio: 0.8,
             maxAspectRatio: 16 / 9,
             hideControlsIn: Duration(seconds: 5))
@@ -53,8 +52,6 @@ class _PlayerState extends State<Player> {
       child: Consumer<PlayerProvider>(
         builder: (context, values, child) {
           final player = Provider.of<PlayerProvider>(context, listen: false);
-          log('Building Fullscreen Selector Builder Widget ${this._isFullscreen}; Provider $values ',
-              name: 'PLAYER');
 
           if (player._isFullscreen != this._isFullscreen &&
               this._isFullscreen != null) {
@@ -103,12 +100,9 @@ class __VideoPlayerState extends State<_VideoPlayer>
               ),
               Positioned.fill(
                 child: player.value.initialized
-                    ? AnimatedSwitcher(
-                        child: player._isControlsShown
-                            ? _PlayerControls()
-                            : GestureDetector(
-                                onTap: player.changeControlsVisibility),
-                        duration: const Duration(milliseconds: 250),
+                    ? Material(
+                        color: Colors.transparent,
+                        child: YoutubeControls(),
                       )
                     : player.value.hasError
                         ? Icon(Icons.error, color: Colors.white)
