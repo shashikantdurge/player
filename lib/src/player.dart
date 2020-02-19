@@ -1,5 +1,6 @@
 part of player;
 
+const _LOG = 'PLAYER';
 typedef ErrorBuilder = Widget Function(
     BuildContext context, VoidCallback retry);
 
@@ -28,15 +29,36 @@ showVideo({
 }
 
 class Player extends StatefulWidget {
+  ///Available controls are
+  ///
+  /// * [DefaultControls]
+  /// * [YoutubeControls]
   final PlayerControls controls;
   final WidgetBuilder loadingBuilder;
   final ErrorBuilder errorBuilder;
+
+  ///Callback function when video is completed.
   final VoidCallback onComplete;
+
+  ///If set to `true`, plays automatically.
   final bool autoPlay;
+
+  ///if there is no touch events from user,
+  ///Controls are automatically hidden after [hideControlsIn] duration.
   final Duration hideControlsIn;
+
+  ///The ratio for minimum width or maximum height
+  ///
+  ///Usually the ratio to allow portrait videos
   final double minAspectRatio;
+
+  ///The ratio for maximum width or minimum height
+  ///
+  ///Usually the ratio to allow landscape videos
   final double maxAspectRatio;
   final VideoPlayerController controller;
+
+  ///if set to `true`, plays video directly in fullscreen
   final bool onlyFullscreen;
 
   const Player({
@@ -104,16 +126,23 @@ class _PlayerState extends State<Player> with TickerProviderStateMixin {
 
   @override
   void didUpdateWidget(Player oldWidget) {
-    final thisWidget = widget;
-    final isEqual = oldWidget == thisWidget;
-    // TODO: implement didUpdateWidget
+    if (widget.controller.dataSource != oldWidget.controller.dataSource) {
+      player._controller.dispose();
+      player._controller = widget.controller;
+      player.init();
+    }
+    if (oldWidget.hideControlsIn != widget.hideControlsIn) {
+      player._hideControlsIn = widget.hideControlsIn;
+    }
     super.didUpdateWidget(oldWidget);
   }
 
   void _listener() {
 //    setState(() {});
     if (_isFullscreen != player._isFullscreen) {
-      this._isFullscreen = player._isFullscreen;
+      setState(() {
+        this._isFullscreen = player._isFullscreen;
+      });
       _handleFullscreen();
     } else {
       setState(() {});
@@ -125,10 +154,7 @@ class _PlayerState extends State<Player> with TickerProviderStateMixin {
     Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         builder: (context) {
-          return ListenableProvider.value(
-            value: player,
-            child: buildPlayer(true),
-          );
+          return buildPlayer(true);
         },
       ),
     );
@@ -143,6 +169,7 @@ class _PlayerState extends State<Player> with TickerProviderStateMixin {
   }
 
   Widget buildPlayer(bool isVisible) {
+    log('isVisible $isVisible', name: _LOG);
     if (!isVisible) return SizedBox();
     Widget playerWidget = Stack(
       fit: StackFit.passthrough,
@@ -150,14 +177,17 @@ class _PlayerState extends State<Player> with TickerProviderStateMixin {
         Center(
           child: AspectRatio(
             aspectRatio: player.value.aspectRatio,
-            child: VideoPlayer(player.controller),
+            child: VideoPlayer(player._controller),
           ),
         ),
         Positioned.fill(
           child: player.value.initialized
               ? Material(
                   color: Colors.transparent,
-                  child: widget.controls,
+                  child: ListenableProvider.value(
+                    value: player,
+                    child: widget.controls,
+                  ),
                 )
               : player.value.hasError
                   ? Icon(Icons.error, color: Colors.white)
@@ -173,13 +203,15 @@ class _PlayerState extends State<Player> with TickerProviderStateMixin {
           return false;
         },
       );
-    } else {
+    } else if (!player.onlyFullscreen) {
       playerWidget = AnimatedSize(
         vsync: this,
         duration: const Duration(milliseconds: 250),
         child: AspectRatio(
-          aspectRatio: player.value.playerRatio
-              .clamp(widget.minAspectRatio, widget.maxAspectRatio),
+          aspectRatio: player.value.playerRatio.clamp(
+            widget.minAspectRatio,
+            widget.maxAspectRatio,
+          ),
           child: playerWidget,
         ),
       );
@@ -193,10 +225,7 @@ class _PlayerState extends State<Player> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableProvider.value(
-      value: player,
-      child: buildPlayer(player.onlyFullscreen ? true : !_isFullscreen),
-    );
+    return buildPlayer(player.onlyFullscreen ? true : !_isFullscreen);
   }
 
   @override

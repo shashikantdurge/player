@@ -22,7 +22,7 @@ class PlayerProgressBar extends StatelessWidget {
     this.controller, {
     this.colors = const PlayerProgressColors(),
     this.height = 4.0,
-    this.padding = const EdgeInsets.only(top: 12),
+    this.padding = const EdgeInsets.symmetric(vertical: 12),
     this.handleRadius = 7.0,
   });
 

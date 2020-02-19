@@ -3,9 +3,9 @@ part of player;
 class PlayerProvider with ChangeNotifier {
   final VoidCallback onComplete;
   final bool autoPlay;
-  final Duration hideControlsIn;
+  Duration _hideControlsIn;
   final bool onlyFullscreen;
-  final VideoPlayerController controller;
+  VideoPlayerController _controller;
 
   bool _isControlsShown = false;
   int _hideControlsMatcher = 0;
@@ -14,16 +14,17 @@ class PlayerProvider with ChangeNotifier {
   bool _isDisposed = false;
 
   bool get mounted => !_isDisposed;
-  VideoPlayerValue get value => controller.value;
+  VideoPlayerValue get value => _controller.value;
   bool get isFullscreen => _isFullscreen;
 
   PlayerProvider({
-    @required this.controller,
+    @required VideoPlayerController controller,
     this.onComplete,
     this.autoPlay,
-    this.hideControlsIn,
+    Duration hideControlsIn,
     this.onlyFullscreen,
-  }) {
+  })  : _controller = controller,
+        _hideControlsIn = hideControlsIn {
     _isFullscreen = onlyFullscreen;
     _listener = () {
       if (value.hasError) {
@@ -37,14 +38,14 @@ class PlayerProvider with ChangeNotifier {
 
   void init() async {
     if (_isDisposed) return;
-    controller.removeListener(_listener);
-    controller.addListener(_listener);
+    _controller.removeListener(_listener);
+    _controller.addListener(_listener);
     notifyListeners();
     try {
-      await controller.initialize();
+      await _controller.initialize();
       if (onlyFullscreen) enterFullscreen();
       if (autoPlay) {
-        await controller.play();
+        await _controller.play();
       }
       notifyListeners();
       Wakelock.enable();
@@ -56,12 +57,12 @@ class PlayerProvider with ChangeNotifier {
   ///`Play`, `Replay` or `Pause` the video
   Future<void> playPause() async {
     if (value.isPlaying) {
-      await controller.pause();
+      await _controller.pause();
     } else if (value.position == value.duration) {
-      await controller.seekTo(Duration.zero);
-      await controller.play();
+      await _controller.seekTo(Duration.zero);
+      await _controller.play();
     } else if (!value.isPlaying) {
-      await controller.play();
+      await _controller.play();
     }
     _showControls();
   }
@@ -73,10 +74,10 @@ class PlayerProvider with ChangeNotifier {
   ///Forward if [seconds]>0
   Future<void> seek(int seconds) async {
     final isCompleted = value.isCompleted;
-    await controller
-        .seekTo(controller.value.position + Duration(seconds: seconds));
+    await _controller
+        .seekTo(_controller.value.position + Duration(seconds: seconds));
     if (isCompleted && seconds < 0) {
-      await controller.play();
+      await _controller.play();
     }
     if (_isControlsShown) _showControls();
   }
@@ -89,7 +90,7 @@ class PlayerProvider with ChangeNotifier {
     final matcher = _hideControlsMatcher + 1;
     if (value.isPlaying && autoHide) {
       Future.delayed(
-        hideControlsIn,
+        _hideControlsIn,
         () => _hideControls(matcher),
       );
     }
@@ -150,7 +151,7 @@ class PlayerProvider with ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
-    controller.dispose();
+    _controller.dispose();
     Wakelock.disable();
     super.dispose();
   }

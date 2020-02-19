@@ -50,7 +50,7 @@ class DefaultControls extends PlayerControls {
   @override
   List<Widget> children(context, PlayerProvider player) {
     final iconSize = 48.0;
-    final duration = player.controller.value.duration;
+    final duration = player._controller.value.duration;
     final timerStyle = Theme.of(context).textTheme.body1;
     final visibilityHandler = Positioned.fill(
       child: GestureDetector(
@@ -65,7 +65,7 @@ class DefaultControls extends PlayerControls {
           left: 0,
           right: 0,
           child: PlayerProgressBar(
-            player.controller,
+            player._controller,
             handleRadius: null,
           ),
         ),
@@ -78,7 +78,7 @@ class DefaultControls extends PlayerControls {
         bottom: player._isFullscreen ? 16 : 0,
         left: 0,
         right: 0,
-        child: PlayerProgressBar(player.controller),
+        child: PlayerProgressBar(player._controller),
       ),
       if (player.value.isCompleted)
         Center(
@@ -140,7 +140,7 @@ class DefaultControls extends PlayerControls {
               style: timerStyle,
             );
           },
-          valueListenable: player.controller,
+          valueListenable: player._controller,
         ),
       ),
       Positioned(
@@ -172,30 +172,25 @@ class YoutubeControls extends PlayerControls {
       return [visibilityHandler];
     }
     final iconSize = 48.0;
-    final duration = player.controller.value.duration;
+    final duration = player._controller.value.duration;
     final timerStyle = Theme.of(context).textTheme.body1;
+    final progressbar = Positioned(
+      bottom: player._isFullscreen ? 24 : 0,
+      left: 0,
+      right: 0,
+      child: PlayerProgressBar(
+        player._controller,
+        padding: ,
+        handleRadius:
+            !player._isControlsShown && !player._isFullscreen ? null : 7,
+      ),
+    );
     if (!player._isControlsShown && !player._isFullscreen) {
-      return [
-        visibilityHandler,
-        Positioned(
-          bottom: player._isFullscreen ? 16 : 0,
-          left: 0,
-          right: 0,
-          child: PlayerProgressBar(
-            player.controller,
-            handleRadius: null,
-          ),
-        ),
-      ];
+      return [visibilityHandler, progressbar];
     }
     return [
       visibilityHandler,
-      Positioned(
-        bottom: player._isFullscreen ? 16 : 0,
-        left: 0,
-        right: 0,
-        child: PlayerProgressBar(player.controller),
-      ),
+      progressbar,
       if (player.value.isPlaying)
         Center(
           child: IconButton(
@@ -221,17 +216,7 @@ class YoutubeControls extends PlayerControls {
           ),
         ),
       Positioned(
-        top: 8,
-        right: 8,
-        child: IconButton(
-          icon: player._isFullscreen
-              ? Icon(Icons.fullscreen_exit)
-              : Icon(Icons.fullscreen),
-          onPressed: player.toggleFullscreen,
-        ),
-      ),
-      Positioned(
-        bottom: player._isFullscreen ? 28 : 12,
+        bottom: player._isFullscreen ? 56 : 18,
         left: 16,
         child: ValueListenableBuilder<VideoPlayerValue>(
           builder: (context, value, child) {
@@ -240,15 +225,25 @@ class YoutubeControls extends PlayerControls {
               style: timerStyle,
             );
           },
-          valueListenable: player.controller,
+          valueListenable: player._controller,
         ),
       ),
       Positioned(
-        bottom: player._isFullscreen ? 28 : 12,
-        right: 16,
+        bottom: player._isFullscreen ? 56 : 18,
+        right: 56,
         child: Text(
           '${duration.formatHHmm(includeHours: duration.inHours > 0)}',
           style: timerStyle,
+        ),
+      ),
+      Positioned(
+        bottom: player._isFullscreen ? 42 : 4,
+        right: 8,
+        child: IconButton(
+          icon: player._isFullscreen
+              ? Icon(Icons.fullscreen_exit)
+              : Icon(Icons.fullscreen),
+          onPressed: player.toggleFullscreen,
         ),
       ),
     ];
