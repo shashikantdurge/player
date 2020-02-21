@@ -7,7 +7,7 @@ typedef ErrorBuilder = Widget Function(
 showVideo({
   @required BuildContext context,
   PlayerControls controls,
-  WidgetBuilder loadingBuilder,
+  WidgetBuilder thumbnail,
   ErrorBuilder errorBuilder,
   VoidCallback onComplete,
   bool autoPlay,
@@ -18,7 +18,7 @@ showVideo({
       .push(MaterialPageRoute(builder: (context) {
     return Player._fullscreen(
       controls: controls ?? const DefaultControls(),
-      loadingBuilder: loadingBuilder,
+      thumbnail: thumbnail,
       errorBuilder: errorBuilder,
       onComplete: onComplete,
       autoPlay: autoPlay ?? true,
@@ -34,8 +34,10 @@ class Player extends StatefulWidget {
   /// * [DefaultControls]
   /// * [YoutubeControls]
   final PlayerControls controls;
-  final WidgetBuilder loadingBuilder;
+  final WidgetBuilder thumbnail;
   final ErrorBuilder errorBuilder;
+
+  final bool loop;
 
   ///Callback function when video is completed.
   final VoidCallback onComplete;
@@ -47,15 +49,15 @@ class Player extends StatefulWidget {
   ///Controls are automatically hidden after [hideControlsIn] duration.
   final Duration hideControlsIn;
 
-  ///The ratio for minimum width or maximum height
+  ///The ratio for minimum width and maximum height
   ///
   ///Usually the ratio to allow portrait videos
-  final double minAspectRatio;
+  final double portraitRatio;
 
-  ///The ratio for maximum width or minimum height
+  ///The ratio for maximum width and minimum height
   ///
   ///Usually the ratio to allow landscape videos
-  final double maxAspectRatio;
+  final double landscapeRatio;
   final VideoPlayerController controller;
 
   ///if set to `true`, plays video directly in fullscreen
@@ -64,36 +66,41 @@ class Player extends StatefulWidget {
   const Player({
     Key key,
     @required this.controller,
-    this.loadingBuilder,
+    this.thumbnail,
     this.errorBuilder,
     this.onComplete,
-    this.controls = const DefaultControls(),
+    this.controls,
     this.autoPlay = true,
     this.hideControlsIn = const Duration(seconds: 5),
-    this.minAspectRatio = 16 / 9,
-    this.maxAspectRatio = 16 / 9,
-  })  : onlyFullscreen = false,
+    this.portraitRatio = 16 / 9,
+    this.landscapeRatio = 16 / 9,
+    this.loop = false,
+  })  :
+//        this.controls = controls ?? const DefaultControls(),
+        onlyFullscreen = false,
         assert(autoPlay != null),
         assert(hideControlsIn != null),
         assert(controller != null),
+//        assert(controls != null),
         assert(
-            minAspectRatio != null && maxAspectRatio != null,
-            'minAspectRatio and maxAspectRatio cannot be null. If you want '
-            'to have constant aspect ratio, asssign the constant aspect ratio'
+            portraitRatio != null && landscapeRatio != null,
+            'portraitRatio and landscapeRatio cannot be null. If you want '
+            'to have same aspect ratio irrespective of the video\'s aspect ratio, asssign the same ratio'
             ' to both of them'),
         super(key: key);
 
   const Player._fullscreen({
     Key key,
     this.controls = const DefaultControls(),
-    this.loadingBuilder,
+    this.thumbnail,
     this.errorBuilder,
     this.onComplete,
     this.autoPlay = true,
     this.hideControlsIn = const Duration(seconds: 5),
     this.controller,
-  })  : minAspectRatio = null,
-        maxAspectRatio = null,
+    this.loop = false,
+  })  : portraitRatio = null,
+        landscapeRatio = null,
         onlyFullscreen = true,
         super(key: key);
 
@@ -126,6 +133,7 @@ class _PlayerState extends State<Player> with TickerProviderStateMixin {
 
   @override
   void didUpdateWidget(Player oldWidget) {
+    super.didUpdateWidget(oldWidget);
     if (widget.controller.dataSource != oldWidget.controller.dataSource) {
       player._controller.dispose();
       player._controller = widget.controller;
@@ -134,7 +142,9 @@ class _PlayerState extends State<Player> with TickerProviderStateMixin {
     if (oldWidget.hideControlsIn != widget.hideControlsIn) {
       player._hideControlsIn = widget.hideControlsIn;
     }
-    super.didUpdateWidget(oldWidget);
+    if (widget.loop != oldWidget.loop) {
+      player.controller?.setLooping(widget.loop ?? false);
+    }
   }
 
   void _listener() {
@@ -175,10 +185,17 @@ class _PlayerState extends State<Player> with TickerProviderStateMixin {
       fit: StackFit.passthrough,
       children: <Widget>[
         Center(
-          child: AspectRatio(
-            aspectRatio: player.value.aspectRatio,
-            child: VideoPlayer(player._controller),
-          ),
+          child: Builder(builder: (context) {
+            if (player.value.initialized && player.value.hasVideo) {
+              return AspectRatio(
+                  aspectRatio: player.value.aspectRatio,
+                  child: VideoPlayer(player.controller));
+            } else if (widget.thumbnail != null) {
+              return widget.thumbnail(context);
+            } else {
+              return Container();
+            }
+          }),
         ),
         Positioned.fill(
           child: player.value.initialized
@@ -204,17 +221,21 @@ class _PlayerState extends State<Player> with TickerProviderStateMixin {
         },
       );
     } else if (!player.onlyFullscreen) {
-      playerWidget = AnimatedSize(
-        vsync: this,
-        duration: const Duration(milliseconds: 250),
-        child: AspectRatio(
-          aspectRatio: player.value.playerRatio.clamp(
-            widget.minAspectRatio,
-            widget.maxAspectRatio,
-          ),
-          child: playerWidget,
+      playerWidget = AspectRatio(
+        aspectRatio: player.value.playerRatio.clamp(
+          widget.portraitRatio,
+          widget.landscapeRatio,
         ),
+        child: playerWidget,
       );
+
+      if (widget.portraitRatio != widget.landscapeRatio) {
+        playerWidget = AnimatedSize(
+          vsync: this,
+          duration: const Duration(milliseconds: 250),
+          child: playerWidget,
+        );
+      }
     }
 
     return Material(

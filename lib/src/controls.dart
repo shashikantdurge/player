@@ -13,7 +13,7 @@ part of player;
 abstract class PlayerControls extends StatelessWidget {
   final Color barrierColor = Colors.black45;
 
-  const PlayerControls();
+  const PlayerControls({Key key}) : super(key: key);
 
   ThemeData theme(BuildContext context) => ThemeData.dark();
   List<Widget> children(BuildContext context, PlayerProvider player);
@@ -45,7 +45,7 @@ abstract class PlayerControls extends StatelessWidget {
 }
 
 class DefaultControls extends PlayerControls {
-  const DefaultControls();
+  const DefaultControls({Key key}) : super(key: key);
 
   @override
   List<Widget> children(context, PlayerProvider player) {
@@ -57,29 +57,34 @@ class DefaultControls extends PlayerControls {
         onTap: player.changeControlsVisibility,
       ),
     );
+    final progressbar = Positioned(
+      bottom: player.isFullscreen ? 56 : 0,
+      left: 0,
+      right: 0,
+      child: Builder(builder: (context) {
+        if (player.isFullscreen && player.isControlsShown) {
+          return PlayerProgressBar();
+        } else if (player.isControlsShown) {
+          return PlayerProgressBar(padding: const EdgeInsets.only(top: 12));
+        } else {
+          return PlayerProgressBar(
+            padding: EdgeInsets.zero,
+            handleRadius: null,
+            enableScrub: false,
+          );
+        }
+      }),
+    );
     if (!player._isControlsShown && !player._isFullscreen) {
       return [
         visibilityHandler,
-        Positioned(
-          bottom: player._isFullscreen ? 16 : 0,
-          left: 0,
-          right: 0,
-          child: PlayerProgressBar(
-            player._controller,
-            handleRadius: null,
-          ),
-        ),
+        progressbar,
       ];
     }
     if (!player._isControlsShown) return [visibilityHandler];
     return [
       visibilityHandler,
-      Positioned(
-        bottom: player._isFullscreen ? 16 : 0,
-        left: 0,
-        right: 0,
-        child: PlayerProgressBar(player._controller),
-      ),
+      progressbar,
       if (player.value.isCompleted)
         Center(
           child: IconButton(
@@ -112,16 +117,6 @@ class DefaultControls extends PlayerControls {
           onPressed: () => player.seek(-10),
         ),
       ),
-      Positioned(
-        top: 8,
-        right: 8,
-        child: IconButton(
-          icon: player._isFullscreen
-              ? Icon(Icons.fullscreen_exit)
-              : Icon(Icons.fullscreen),
-          onPressed: player.toggleFullscreen,
-        ),
-      ),
       Align(
         alignment: Alignment(0.6, 0),
         child: IconButton(
@@ -130,8 +125,19 @@ class DefaultControls extends PlayerControls {
           onPressed: () => player.seek(10),
         ),
       ),
+      if (!player.onlyFullscreen)
+        Positioned(
+          top: 8,
+          right: 8,
+          child: IconButton(
+            icon: player._isFullscreen
+                ? Icon(Icons.fullscreen_exit)
+                : Icon(Icons.fullscreen),
+            onPressed: player.toggleFullscreen,
+          ),
+        ),
       Positioned(
-        bottom: player._isFullscreen ? 28 : 12,
+        bottom: player._isFullscreen ? 92 : 12,
         left: 16,
         child: ValueListenableBuilder<VideoPlayerValue>(
           builder: (context, value, child) {
@@ -144,21 +150,29 @@ class DefaultControls extends PlayerControls {
         ),
       ),
       Positioned(
-        bottom: player._isFullscreen ? 28 : 12,
+        bottom: player._isFullscreen ? 92 : 12,
         right: 16,
         child: Text(
           '${duration.formatHHmm(includeHours: duration.inHours > 0)}',
           style: timerStyle,
         ),
       ),
+      Positioned(
+        top: 0,
+        left: 0,
+        child: BackButton(),
+      )
     ];
   }
 }
 
 class YoutubeControls extends PlayerControls {
   final int seekSeconds;
+  final VoidCallback onNext, onPrevious;
 
-  YoutubeControls({this.seekSeconds = 10});
+  const YoutubeControls(
+      {this.onNext, this.onPrevious, this.seekSeconds = 10, Key key})
+      : super(key: key);
 
   @override
   List<Widget> children(BuildContext context, PlayerProvider player) {
@@ -168,22 +182,30 @@ class YoutubeControls extends PlayerControls {
         seekSeconds: seekSeconds,
       ),
     );
-    if (!player._isControlsShown && player.isFullscreen) {
+    if (!player.isControlsShown && player.isFullscreen) {
       return [visibilityHandler];
     }
+
     final iconSize = 48.0;
-    final duration = player._controller.value.duration;
+    final duration = player.value.duration;
     final timerStyle = Theme.of(context).textTheme.body1;
     final progressbar = Positioned(
-      bottom: player._isFullscreen ? 24 : 0,
+      bottom: player.isFullscreen ? 24 : 0,
       left: 0,
       right: 0,
-      child: PlayerProgressBar(
-        player._controller,
-        padding: ,
-        handleRadius:
-            !player._isControlsShown && !player._isFullscreen ? null : 7,
-      ),
+      child: Builder(builder: (context) {
+        if (player.isFullscreen && player.isControlsShown) {
+          return PlayerProgressBar();
+        } else if (player.isControlsShown) {
+          return PlayerProgressBar(padding: const EdgeInsets.only(top: 12));
+        } else {
+          return PlayerProgressBar(
+            padding: EdgeInsets.zero,
+            handleRadius: null,
+            enableScrub: false,
+          );
+        }
+      }),
     );
     if (!player._isControlsShown && !player._isFullscreen) {
       return [visibilityHandler, progressbar];
@@ -215,8 +237,24 @@ class YoutubeControls extends PlayerControls {
             onPressed: player.playPause,
           ),
         ),
+      Align(
+        alignment: Alignment(-0.6, 0),
+        child: IconButton(
+          iconSize: iconSize,
+          icon: Icon(Icons.skip_previous),
+          onPressed: onPrevious,
+        ),
+      ),
+      Align(
+        alignment: Alignment(0.6, 0),
+        child: IconButton(
+          iconSize: iconSize,
+          icon: Icon(Icons.skip_next),
+          onPressed: onNext,
+        ),
+      ),
       Positioned(
-        bottom: player._isFullscreen ? 56 : 18,
+        bottom: player.isFullscreen ? 56 : 18,
         left: 16,
         child: ValueListenableBuilder<VideoPlayerValue>(
           builder: (context, value, child) {
@@ -225,27 +263,33 @@ class YoutubeControls extends PlayerControls {
               style: timerStyle,
             );
           },
-          valueListenable: player._controller,
+          valueListenable: player.controller,
         ),
       ),
       Positioned(
-        bottom: player._isFullscreen ? 56 : 18,
+        bottom: player.isFullscreen ? 56 : 18,
         right: 56,
         child: Text(
           '${duration.formatHHmm(includeHours: duration.inHours > 0)}',
           style: timerStyle,
         ),
       ),
-      Positioned(
-        bottom: player._isFullscreen ? 42 : 4,
-        right: 8,
-        child: IconButton(
-          icon: player._isFullscreen
-              ? Icon(Icons.fullscreen_exit)
-              : Icon(Icons.fullscreen),
-          onPressed: player.toggleFullscreen,
+      if (!player.onlyFullscreen)
+        Positioned(
+          bottom: player.isFullscreen ? 42 : 4,
+          right: 8,
+          child: IconButton(
+            icon: player.isFullscreen
+                ? Icon(Icons.fullscreen_exit)
+                : Icon(Icons.fullscreen),
+            onPressed: player.toggleFullscreen,
+          ),
         ),
-      ),
+      Positioned(
+        top: 0,
+        left: 0,
+        child: BackButton(),
+      )
     ];
   }
 }

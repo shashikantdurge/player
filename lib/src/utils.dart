@@ -30,4 +30,15 @@ extension on VideoPlayerValue {
     }
     return aspectRatio;
   }
+
+  bool get hasVideo {
+    if (size == null) {
+      return false;
+    }
+    final double aspectRatio = size.width / size.height;
+    if (!aspectRatio.isFinite || aspectRatio <= 0.0) {
+      return false;
+    }
+    return true;
+  }
 }

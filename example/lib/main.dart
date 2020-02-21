@@ -5,7 +5,10 @@ const landscapeVideo =
     "https://player.vimeo.com/external/340643735.hd.mp4?s=86c98b4dc4b52bcd290236673e5de6724982b65e&profile_id=174";
 const portraitVideo =
     "https://firebasestorage.googleapis.com/v0/b/shaale-one-development.appspot.com/o/temp%2Fvideoplayback.mp4?alt=media&token=83209811-676b-4d0c-bb4b-445b6a216796";
+const audio =
+    "https://firebasestorage.googleapis.com/v0/b/shaale-one-development.appspot.com/o/Library%2FAudio%2F1L9bWB3FNCXJTmoYQPKp%2F002%20-%202.8.10.mp3?alt=media&token=31e0bfb9-e590-4c74-a91c-c5f295e136a8";
 
+const playlist = [portraitVideo, landscapeVideo, audio];
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
@@ -26,11 +29,6 @@ class MyHomePage extends StatelessWidget {
   MyHomePage({Key key, this.title}) : super(key: key);
   final String title;
 
-//  @override
-//  _MyHomePageState createState() => _MyHomePageState();
-//}
-//
-//class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -38,13 +36,14 @@ class MyHomePage extends StatelessWidget {
         title: Text(title),
       ),
       body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
           RaisedButton(
             onPressed: () {
               Navigator.of(context).push(
                   MaterialPageRoute(builder: (context) => VideoExample()));
             },
-            child: Text('Normal player'),
+            child: Center(child: Text('PLAYER - All features')),
           ),
           RaisedButton(
             onPressed: () {
@@ -74,87 +73,136 @@ class VideoExample extends StatefulWidget {
 }
 
 class _VideoExampleState extends State<VideoExample> {
-  String dataSource;
-  PlayerControls playerControls;
+  ///Index of the data source from [playlist] being played
+  int index;
+//  PlayerControls playerControls;
+  Type controlsType;
+  bool thumbnailEnabled;
+  bool loop;
 
   @override
   void initState() {
     super.initState();
-    dataSource = portraitVideo;
-    playerControls = DefaultControls();
+    index = 0;
+    thumbnailEnabled = true;
+    loop = false;
+    controlsType = DefaultControls;
+  }
+
+  void changeDataSource(int newIndex) {
+    setState(() {
+      index = newIndex;
+    });
+  }
+
+  PlayerControls get playerControls {
+    if (controlsType == DefaultControls) {
+      return DefaultControls();
+    } else if (controlsType == YoutubeControls) {
+      return YoutubeControls(
+        onNext: index < playlist.length - 1
+            ? () {
+                setState(() {
+                  index += 1;
+                });
+              }
+            : null,
+        onPrevious: index > 0
+            ? () {
+                setState(() {
+                  index -= 1;
+                });
+              }
+            : null,
+      );
+    }
+    return null;
+  }
+
+  void changeControlsType(Type newControlsType) {
+    setState(() {
+      controlsType = newControlsType;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Player example')),
-      body: SingleChildScrollView(
+//      appBar: AppBar(title: Text('Player example')),
+      body: SafeArea(
         child: Column(
           children: <Widget>[
             Player(
-              controller: VideoPlayerController.network(dataSource),
-              minAspectRatio: 0.8,
-              maxAspectRatio: 16 / 9,
+              controller: VideoPlayerController.network(playlist[index]),
+              portraitRatio: 1,
+              landscapeRatio: 16 / 9,
               controls: playerControls,
+              loop: loop,
+              thumbnail: thumbnailEnabled ? (_) => FlutterLogo(size: 86) : null,
             ),
-            SizedBox(height: 32),
-            Text(
-              'Choose Video',
-              style: Theme.of(context).textTheme.body2,
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    SwitchListTile(
+                      title: Text('Thumbnail'),
+                      subtitle: Text(
+                          'Displayed while the video is being loaded and/or if it\'s audio'),
+                      isThreeLine: true,
+                      value: thumbnailEnabled,
+                      onChanged: (bool value) {
+                        setState(() {
+                          thumbnailEnabled = value;
+                        });
+                      },
+                    ),
+                    SwitchListTile(
+                      title: Text('Loop'),
+                      subtitle: Text('Media will play again after completion'),
+                      value: loop,
+                      onChanged: (bool value) {
+                        setState(() {
+                          loop = value;
+                        });
+                      },
+                    ),
+                    ListTile(title: Text('Choose Video/Audio')),
+                    RadioListTile(
+                      title: Text('Portrait video'),
+                      value: 0,
+                      groupValue: index,
+                      onChanged: changeDataSource,
+                    ),
+                    RadioListTile(
+                      title: Text('Landcape video'),
+                      value: 1,
+                      groupValue: index,
+                      onChanged: changeDataSource,
+                    ),
+                    RadioListTile(
+                      title: Text('Audio'),
+                      value: 2,
+                      groupValue: index,
+                      onChanged: changeDataSource,
+                    ),
+                    ListTile(title: Text('Choose controls')),
+                    RadioListTile<Type>(
+                      value: DefaultControls,
+                      title: Text('Default controls'),
+                      groupValue: controlsType,
+                      onChanged: changeControlsType,
+                    ),
+                    RadioListTile<Type>(
+                      value: YoutubeControls,
+                      title: Text('Youtube controls'),
+                      groupValue: controlsType,
+                      onChanged: changeControlsType,
+                    ),
+                  ],
+                ),
+              ),
             ),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: RaisedButton(
-                    onPressed: () {
-                      setState(() {
-                        dataSource = portraitVideo;
-                      });
-                    },
-                    child: Text('Portrait video'),
-                  ),
-                ),
-                Expanded(
-                  child: RaisedButton(
-                    onPressed: () {
-                      setState(() {
-                        dataSource = landscapeVideo;
-                      });
-                    },
-                    child: Text('Landscape video'),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 32),
-            Text(
-              'Choose controls',
-              style: Theme.of(context).textTheme.body2,
-            ),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: RaisedButton(
-                    onPressed: () {
-                      setState(() {
-                        playerControls = DefaultControls();
-                      });
-                    },
-                    child: Text('Default controls'),
-                  ),
-                ),
-                Expanded(
-                  child: RaisedButton(
-                    onPressed: () {
-                      setState(() {
-                        playerControls = YoutubeControls();
-                      });
-                    },
-                    child: Text('Youtube controls'),
-                  ),
-                ),
-              ],
-            )
           ],
         ),
       ),

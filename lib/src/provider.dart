@@ -8,14 +8,17 @@ class PlayerProvider with ChangeNotifier {
   VideoPlayerController _controller;
 
   bool _isControlsShown = false;
+
   int _hideControlsMatcher = 0;
   bool _isFullscreen;
   VoidCallback _listener;
   bool _isDisposed = false;
 
+  bool get isControlsShown => _isControlsShown;
   bool get mounted => !_isDisposed;
   VideoPlayerValue get value => _controller.value;
   bool get isFullscreen => _isFullscreen;
+  VideoPlayerController get controller => _controller;
 
   PlayerProvider({
     @required VideoPlayerController controller,

@@ -15,75 +15,98 @@ class PlayerProgressColors {
   final Color handleColor;
 }
 
-class PlayerProgressBar extends StatelessWidget {
+class PlayerProgressBar extends StatefulWidget {
   final double height, handleRadius;
   final EdgeInsets padding;
-  PlayerProgressBar(
-    this.controller, {
+  final bool enableScrub;
+  PlayerProgressBar({
     this.colors = const PlayerProgressColors(),
     this.height = 4.0,
     this.padding = const EdgeInsets.symmetric(vertical: 12),
     this.handleRadius = 7.0,
+    this.enableScrub = true,
   });
 
-  final VideoPlayerController controller;
+//  final VideoPlayerController controller;
   final PlayerProgressColors colors;
 
   @override
-  Widget build(BuildContext context) {
-    bool _controllerWasPlaying = false;
-    void seekToRelativePosition(Offset globalPosition) async {
-      final box = context.findRenderObject() as RenderBox;
-      final Offset tapPos = box.globalToLocal(globalPosition);
-      final double relative = tapPos.dx / box.size.width;
-      final Duration position = controller.value.duration * relative;
-      final isCompleted = controller.value.isCompleted;
-      await controller.seekTo(position);
-      if (isCompleted) {
-        //This is bug fix for https://github.com/flutter/flutter/issues/50686
-        Provider.of<PlayerProvider>(context, listen: false).playPause();
-      }
-    }
+  _PlayerProgressBarState createState() => _PlayerProgressBarState();
+}
 
+class _PlayerProgressBarState extends State<PlayerProgressBar> {
+  bool _controllerWasPlaying = false;
+  PlayerProvider player;
+
+  @override
+  void didChangeDependencies() {
+    player = Provider.of<PlayerProvider>(context, listen: false);
+    super.didChangeDependencies();
+  }
+
+  void seekToRelativePosition(Offset globalPosition) async {
+    final box = context.findRenderObject() as RenderBox;
+    final Offset tapPos = box.globalToLocal(globalPosition);
+    final double relative = tapPos.dx / box.size.width;
+    final Duration position = player.value.duration * relative;
+    final isCompleted = player.value.isCompleted;
+    await player.controller.seekTo(position);
+    if (isCompleted) {
+      //This is bug fix for https://github.com/flutter/flutter/issues/50686
+      player.playPause();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return ValueListenableBuilder<VideoPlayerValue>(
-      valueListenable: controller,
-      builder: (context, value, child) => GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        child: Container(
-          padding: padding,
+      valueListenable: player.controller,
+      builder: (context, value, child) {
+        final progressBar = Container(
+          padding: widget.padding,
           child: CustomPaint(
-            size: Size.fromHeight(height),
+            size: Size.fromHeight(widget.height),
             painter: _ProgressBarPainter(
-                value: value, colors: colors, handleRadius: handleRadius),
+              value: value,
+              colors: widget.colors,
+              handleRadius: widget.handleRadius,
+            ),
           ),
-        ),
-        onHorizontalDragStart: (DragStartDetails details) {
-          if (!value.initialized) {
-            return;
-          }
-          _controllerWasPlaying = value.isPlaying;
-          if (_controllerWasPlaying) {
-            controller.pause();
-          }
-        },
-        onHorizontalDragUpdate: (DragUpdateDetails details) {
-          if (!value.initialized) {
-            return;
-          }
-          seekToRelativePosition(details.globalPosition);
-        },
-        onHorizontalDragEnd: (DragEndDetails details) {
-          if (_controllerWasPlaying) {
-            controller.play();
-          }
-        },
-        onTapDown: (TapDownDetails details) {
-          if (!value.initialized) {
-            return;
-          }
-          seekToRelativePosition(details.globalPosition);
-        },
-      ),
+        );
+        if (!widget.enableScrub) return progressBar;
+        return GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          child: progressBar,
+          onHorizontalDragStart: (DragStartDetails details) {
+            if (!value.initialized) {
+              return;
+            }
+            _controllerWasPlaying = value.isPlaying;
+            if (_controllerWasPlaying) {
+              player.controller.pause();
+            }
+            player._showControls(autoHide: false);
+          },
+          onHorizontalDragUpdate: (DragUpdateDetails details) {
+            if (!value.initialized) {
+              return;
+            }
+            seekToRelativePosition(details.globalPosition);
+          },
+          onHorizontalDragEnd: (DragEndDetails details) {
+            if (_controllerWasPlaying) {
+              player.controller.play();
+            }
+            player._showControls();
+          },
+          onTapDown: (TapDownDetails details) {
+            if (!value.initialized) {
+              return;
+            }
+            seekToRelativePosition(details.globalPosition);
+          },
+        );
+      },
     );
   }
 }
