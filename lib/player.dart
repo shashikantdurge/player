@@ -1,5 +1,6 @@
 library player;
 
+import 'dart:async';
 import 'dart:developer';
 import 'dart:math' as math;
 
@@ -7,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
+import 'package:phone_state_i/phone_state_i.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:wakelock/wakelock.dart';

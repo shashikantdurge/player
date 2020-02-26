@@ -20,6 +20,14 @@ class PlayerProvider with ChangeNotifier {
   bool get isFullscreen => _isFullscreen;
   VideoPlayerController get controller => _controller;
 
+  StreamSubscription<PhoneStateCallEvent> _subscription;
+  Future<void> _phoneStateListener(PhoneStateCallEvent event) async {
+    if (event.stateC == 'true') {
+      await _controller.pause();
+      _showControls(autoHide: false);
+    }
+  }
+
   PlayerProvider({
     @required VideoPlayerController controller,
     this.onComplete,
@@ -37,6 +45,7 @@ class PlayerProvider with ChangeNotifier {
         if (onComplete != null) onComplete();
       }
     };
+    _subscription = phoneStateCallEvent.listen(_phoneStateListener);
   }
 
   void init() async {
@@ -154,6 +163,7 @@ class PlayerProvider with ChangeNotifier {
   @override
   void dispose() {
     _isDisposed = true;
+    _subscription.cancel();
     _controller.dispose();
     Wakelock.disable();
     super.dispose();
