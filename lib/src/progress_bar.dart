@@ -22,7 +22,7 @@ class PlayerProgressBar extends StatefulWidget {
   PlayerProgressBar({
     this.colors = const PlayerProgressColors(),
     this.height = 4.0,
-    this.padding = const EdgeInsets.symmetric(vertical: 12),
+    this.padding = const EdgeInsets.symmetric(vertical: 18),
     this.handleRadius = 7.0,
     this.enableScrub = true,
   });

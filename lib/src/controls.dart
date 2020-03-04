@@ -52,9 +52,21 @@ class DefaultControls extends PlayerControls {
     final iconSize = 48.0;
     final duration = player._controller.value.duration;
     final timerStyle = Theme.of(context).textTheme.body1;
-    final visibilityHandler = Positioned.fill(
-      child: GestureDetector(
-        onTap: player.changeControlsVisibility,
+    final visibilityHandler = GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: player.changeControlsVisibility,
+    );
+    //TODO it does not work in Android
+    final buffering = Center(
+      child: ValueListenableBuilder<VideoPlayerValue>(
+        builder: (context, value, child) {
+          if (value.isBuffering) {
+            return CircularProgressIndicator();
+          }
+          return child;
+        },
+        child: SizedBox(),
+        valueListenable: player.controller,
       ),
     );
     final progressbar = Positioned(
@@ -65,7 +77,7 @@ class DefaultControls extends PlayerControls {
         if (player.isFullscreen && player.isControlsShown) {
           return PlayerProgressBar();
         } else if (player.isControlsShown) {
-          return PlayerProgressBar(padding: const EdgeInsets.only(top: 12));
+          return PlayerProgressBar(padding: const EdgeInsets.only(top: 36));
         } else {
           return PlayerProgressBar(
             padding: EdgeInsets.zero,
@@ -77,6 +89,7 @@ class DefaultControls extends PlayerControls {
     );
     if (!player._isControlsShown && !player._isFullscreen) {
       return [
+        buffering,
         visibilityHandler,
         progressbar,
       ];
@@ -84,7 +97,7 @@ class DefaultControls extends PlayerControls {
     if (!player._isControlsShown) return [visibilityHandler];
     return [
       visibilityHandler,
-      progressbar,
+      buffering,
       if (player.value.isCompleted)
         Center(
           child: IconButton(
@@ -161,7 +174,8 @@ class DefaultControls extends PlayerControls {
         top: 0,
         left: 0,
         child: BackButton(),
-      )
+      ),
+      progressbar,
     ];
   }
 }
@@ -176,16 +190,26 @@ class YoutubeControls extends PlayerControls {
 
   @override
   List<Widget> children(BuildContext context, PlayerProvider player) {
-    final visibilityHandler = Positioned.fill(
-      child: _YoutubeGestureHandler(
-        player: player,
-        seekSeconds: seekSeconds,
+    final visibilityHandler = _YoutubeGestureHandler(
+      player: player,
+      seekSeconds: seekSeconds,
+    );
+    final buffering = Center(
+      child: ValueListenableBuilder<VideoPlayerValue>(
+        builder: (context, value, child) {
+          if (value.isBuffering) {
+            return CircularProgressIndicator();
+          }
+          return child;
+        },
+        child: SizedBox(),
+        valueListenable: player.controller,
       ),
     );
     if (!player.isControlsShown && player.isFullscreen) {
-      return [visibilityHandler];
+      return [visibilityHandler, buffering];
     }
-
+    //TODO it does not work in Android
     final iconSize = 48.0;
     final duration = player.value.duration;
     final timerStyle = Theme.of(context).textTheme.body1;
@@ -197,7 +221,7 @@ class YoutubeControls extends PlayerControls {
         if (player.isFullscreen && player.isControlsShown) {
           return PlayerProgressBar();
         } else if (player.isControlsShown) {
-          return PlayerProgressBar(padding: const EdgeInsets.only(top: 12));
+          return PlayerProgressBar(padding: const EdgeInsets.only(top: 36));
         } else {
           return PlayerProgressBar(
             padding: EdgeInsets.zero,
@@ -208,11 +232,11 @@ class YoutubeControls extends PlayerControls {
       }),
     );
     if (!player._isControlsShown && !player._isFullscreen) {
-      return [visibilityHandler, progressbar];
+      return [buffering, visibilityHandler, progressbar];
     }
     return [
       visibilityHandler,
-      progressbar,
+      buffering,
       if (player.value.isPlaying)
         Center(
           child: IconButton(
@@ -274,6 +298,7 @@ class YoutubeControls extends PlayerControls {
           style: timerStyle,
         ),
       ),
+      progressbar,
       if (!player.onlyFullscreen)
         Positioned(
           bottom: player.isFullscreen ? 42 : 4,
@@ -289,7 +314,7 @@ class YoutubeControls extends PlayerControls {
         top: 0,
         left: 0,
         child: BackButton(),
-      )
+      ),
     ];
   }
 }
