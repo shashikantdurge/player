@@ -210,6 +210,13 @@ class _PlayerState extends State<Player> with TickerProviderStateMixin {
                   ? Icon(Icons.error, color: Colors.white)
                   : Center(child: CircularProgressIndicator()),
         ),
+        //TODO Add it to the controls
+        if (!player.value.initialized)
+          Positioned(
+            top: 8,
+            left: 8,
+            child: BackButton(color: Colors.white),
+          ),
       ],
     );
     if (_isFullscreen) {

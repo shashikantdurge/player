@@ -147,7 +147,11 @@ class PlayerProvider with ChangeNotifier {
 
   void exitFullscreen() {
     if (_isDisposed) return;
-    SystemChrome.setPreferredOrientations([]);
+    //TODO Handle orientation like a PRO in future
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.portraitUp,
+    ]);
     SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values);
     _isFullscreen = false;
     notifyListeners();
