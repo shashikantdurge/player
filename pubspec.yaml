@@ -1,8 +1,8 @@
 name: player
 description: A Flutter package.
 version: 0.0.1
-author: Shashikant Durge
-homepage: ''
+author: Shashikant Durge <meshashi00@gmail.com>
+homepage: https://github.com/shashikantdurge/player
 
 environment:
   sdk: ">=2.6.0 <3.0.0"

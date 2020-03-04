@@ -1,3 +1,6 @@
-## [0.0.1] - TODO: Add release date.
+## [0.0.1] - 4 March, 2020
 
-* TODO: Describe initial release.
+* Initial release.
+* Youtube controls
+* Default controls
+* Temporary fix for https://github.com/flutter/flutter/issues/50686 
