@@ -69,19 +69,17 @@ class Player extends StatefulWidget {
     this.thumbnail,
     this.errorBuilder,
     this.onComplete,
-    this.controls,
+    PlayerControls controls,
     this.autoPlay = true,
     this.hideControlsIn = const Duration(seconds: 5),
     this.portraitRatio = 16 / 9,
     this.landscapeRatio = 16 / 9,
     this.loop = false,
-  })  :
-//        this.controls = controls ?? const DefaultControls(),
+  })  : this.controls = controls ?? const DefaultControls(),
         onlyFullscreen = false,
         assert(autoPlay != null),
         assert(hideControlsIn != null),
         assert(controller != null),
-//        assert(controls != null),
         assert(
             portraitRatio != null && landscapeRatio != null,
             'portraitRatio and landscapeRatio cannot be null. If you want '
@@ -207,7 +205,7 @@ class _PlayerState extends State<Player> with TickerProviderStateMixin {
                   ),
                 )
               : player.value.hasError
-                  ? Icon(Icons.error, color: Colors.white)
+                  ? _DefaultErrorWidget(player: player)
                   : Center(child: CircularProgressIndicator()),
         ),
         //TODO Add it to the controls
@@ -260,5 +258,29 @@ class _PlayerState extends State<Player> with TickerProviderStateMixin {
   void dispose() {
     player.dispose();
     super.dispose();
+  }
+}
+
+class _DefaultErrorWidget extends StatelessWidget {
+  final PlayerProvider player;
+
+  const _DefaultErrorWidget({Key key, @required this.player}) : super(key: key);
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.black26,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Text(
+            'Something went wrong',
+            style: TextStyle(color: Colors.white),
+          ),
+          SizedBox(height: 8),
+          RaisedButton(child: Text('RETRY'), onPressed: player.init)
+        ],
+      ),
+    );
+    return null;
   }
 }

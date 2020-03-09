@@ -86,7 +86,7 @@ class _VideoExampleState extends State<VideoExample> {
     index = 0;
     thumbnailEnabled = true;
     loop = false;
-    controlsType = DefaultControls;
+//    controlsType = DefaultControls;
   }
 
   void changeDataSource(int newIndex) {

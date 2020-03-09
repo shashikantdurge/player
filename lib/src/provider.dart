@@ -54,6 +54,9 @@ class PlayerProvider with ChangeNotifier {
     _controller.addListener(_listener);
     notifyListeners();
     try {
+      if (_controller?.value?.hasError ?? false) {
+        _controller.value = VideoPlayerValue.uninitialized();
+      }
       await _controller.initialize();
       if (onlyFullscreen) enterFullscreen();
       if (autoPlay) {
