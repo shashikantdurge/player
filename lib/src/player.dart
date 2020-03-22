@@ -281,6 +281,5 @@ class _DefaultErrorWidget extends StatelessWidget {
         ],
       ),
     );
-    return null;
   }
 }
